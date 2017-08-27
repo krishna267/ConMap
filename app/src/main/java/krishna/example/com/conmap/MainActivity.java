@@ -1,15 +1,22 @@
 package krishna.example.com.conmap;
 
+import android.*;
+import android.Manifest;
 import android.app.Dialog;
 import android.content.ContentProviderOperation;
 import android.content.DialogInterface;
+import android.content.pm.PackageManager;
 import android.provider.ContactsContract;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.DialogFragment;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
+
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
@@ -24,6 +31,7 @@ import java.util.ArrayList;
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback,GoogleMap.OnMarkerClickListener{
 
     private Button addButton;
+    private int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 5,networkstatus = 0;
     private SupportMapFragment mapFragment;
     private String lat[] = new String[5],lon[] = new String[5],name[] = new String[5];
 
@@ -38,18 +46,52 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         addButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                v.setClickable(false);
                 networkThread thread = new networkThread();
                 thread.start();
                 try {
                     thread.join();
+                    if(networkstatus==0){
+                        Toast.makeText(MainActivity.this,"Please enable Internet",Toast.LENGTH_SHORT).show();
+                        return;
+                    }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
                 mapFragment = (SupportMapFragment)getSupportFragmentManager().findFragmentById(R.id.map_fragment);
                 mapFragment.getMapAsync(MainActivity.this);
+                v.setClickable(false);
             }
         });
+
+        // Here, thisActivity is the current activity
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_CONTACTS)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            // Should we show an explanation?
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.WRITE_CONTACTS)) {
+
+                // Show an explanation to the user *asynchronously* -- don't block
+                // this thread waiting for the user's response! After the user
+                // sees the explanation, try again to request the permission.
+                Toast.makeText(this, "Contacts Permisson needed!!!", Toast.LENGTH_SHORT).show();
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.WRITE_CONTACTS},
+                        MY_PERMISSIONS_REQUEST_READ_CONTACTS);
+            } else {
+
+                // No explanation needed, we can request the permission.
+
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.WRITE_CONTACTS},
+                        MY_PERMISSIONS_REQUEST_READ_CONTACTS);
+
+                // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+                // app-defined int constant. The callback method gets the
+                // result of the request.
+            }
+        }
 
     }
 
@@ -60,6 +102,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             URL link = new URL(url);
             //URLConnection urlConnection = link.openConnection();
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(link.openStream()));
+            if(bufferedReader==null){
+                networkstatus = 0;
+                return null;
+            }
+            networkstatus = 1;
             String line;
             while((line = bufferedReader.readLine())!=null){
                 data.append(line+"\n");
